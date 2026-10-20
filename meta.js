@@ -35,7 +35,9 @@ function describeScript(code) {
     includeGlobs: all('include'),
     excludeGlobs: all('exclude'),
     runAt: RUN_AT[first('run-at')] || 'document_idle',
-    allFrames: !('noframes' in header)
+    allFrames: !('noframes' in header),
+    // page: the page's own world, without the GM API; anything else: the isolated USER_SCRIPT world
+    world: first('inject-into') === 'page' ? 'MAIN' : 'USER_SCRIPT'
   };
 
   if (!info.name) return { error: 'The header needs an @name.' };

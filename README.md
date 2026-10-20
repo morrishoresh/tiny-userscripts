@@ -36,6 +36,7 @@ one updates it.
 | `@include` / `@exclude` | Globs (no regular expressions) |
 | `@run-at` | `document-start`, `document-end`, `document-idle` (default) |
 | `@noframes` | Top frame only |
+| `@inject-into page` | Run in the page's own world instead of the isolated user script world. The script then sees the page's globals and cookies, and gets only `GM.info` / `GM_info`, no other GM API |
 
 `@grant`, `@require` and `@resource` are ignored.
 

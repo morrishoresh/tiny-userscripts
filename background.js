@@ -54,7 +54,8 @@ async function registerOne(script) {
     js: [{ code: wrap(script, info) }],
     matches: info.matches,
     runAt: info.runAt,
-    allFrames: info.allFrames
+    allFrames: info.allFrames,
+    world: info.world
   };
   if (info.excludeMatches.length) registration.excludeMatches = info.excludeMatches;
   if (info.includeGlobs.length) registration.includeGlobs = info.includeGlobs;
@@ -107,15 +108,20 @@ function gmApi(scriptId, info) {
   });
 }
 
+// In the MAIN world there is no extension runtime to message, so GM only carries info.
 function wrap(script, info) {
   const gmInfo = {
     scriptHandler: 'Tiny Userscripts',
     version: ext.runtime.getManifest().version,
     script: { name: info.name, namespace: info.namespace, version: info.version, description: info.description }
   };
+  const gm =
+    info.world === 'MAIN'
+      ? `Object.freeze({ info: Object.freeze(${JSON.stringify(gmInfo)}) })`
+      : `(${gmApi})(${JSON.stringify(script.id)}, ${JSON.stringify(gmInfo)})`;
   return [
     '(function () {',
-    `const GM = (${gmApi})(${JSON.stringify(script.id)}, ${JSON.stringify(gmInfo)});`,
+    `const GM = ${gm};`,
     'const GM_info = GM.info;',
     script.code,
     '})();',
