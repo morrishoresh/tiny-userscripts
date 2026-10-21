@@ -23,7 +23,10 @@
   .status.ok { background: #e3f6e8; color: #1d6b34; }
   .status.bad { background: #fde8e8; color: #9b1c1c; }
   textarea { width: 100%; box-sizing: border-box; height: 320px; font: 12px ui-monospace, Menlo, Consolas, monospace; padding: 8px; border: 1px solid #c9cdd9; border-radius: 6px; }
+  textarea[readonly] { background: #f6f7fa; }
   .buttons { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .buttons button { flex-shrink: 0; }
+  #message { min-width: 0; white-space: pre-line; }
   #message.bad { color: #9b1c1c; }
   #empty { color: #6b7080; }
 </style>
@@ -49,9 +52,9 @@
 console.log('hello');"></textarea>
 <div class="buttons">
   <button id="save">Install</button>
-  <button id="import">Import file…</button>
+  <button id="import">Import files…</button>
   <button id="cancel" hidden>Cancel</button>
-  <input type="file" id="file" accept=".js" hidden>
+  <input type="file" id="file" accept=".js" multiple hidden>
   <span id="message"></span>
 </div>
 

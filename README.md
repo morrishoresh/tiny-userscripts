@@ -21,8 +21,10 @@ in the manager's banner, then open the extension's Details and turn on **Allow U
 
 ## Use
 
-Click the toolbar icon to open the manager. Paste a script (or **Import file…**) and click
-**Install**. Click **Allow** in the banner once to permit user scripts; each script
+Click the toolbar icon to open the manager. Paste a script (or **Import files…**) and click
+**Install**. **Import files…** accepts several files at once; they are shown read-only and
+**Install all** installs them together, with one prompt for the sites they match (files with an
+invalid header are skipped). Click **Allow** in the banner once to permit user scripts; each script
 then asks for access to the sites it matches. Installing a script with the same `@name` and `@namespace` as an existing
 one updates it.
 

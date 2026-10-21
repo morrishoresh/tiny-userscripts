@@ -1,6 +1,8 @@
 const ext = globalThis.browser || globalThis.chrome;
 
 let editingId = null;
+// Files picked together with Import files…, installed in one go: [{ fileName, code }]
+let batch = null;
 
 function el(id) {
   return document.getElementById(id);
@@ -21,8 +23,8 @@ function say(text, bad = false) {
 // Firefox only shows the permission prompt when request() runs straight from a click,
 // so callers must not await anything before calling this. userScripts cannot be requested
 // together with anything else; the banner's Allow button requests it on its own.
-function requestAccess(info) {
-  return ext.permissions.request({ origins: originsFor(info) });
+function requestAccess(...infos) {
+  return ext.permissions.request({ origins: [...new Set(infos.flatMap(originsFor))] });
 }
 
 function hasUserScriptsPermission() {
@@ -152,18 +154,22 @@ async function deleteScript(id) {
 }
 
 // Installing a script with the same @name and @namespace as an existing one updates it.
-async function saveScript(code, info) {
+// Takes [{ code, info }] and saves them in one write; returns 'Installed' or 'Updated' for each.
+async function saveScripts(items) {
   const { scripts } = await ext.storage.local.get({ scripts: [] });
-  const existing = editingId
-    ? scripts.find((s) => s.id === editingId)
-    : scripts.find((s) => {
-        const other = describeScript(s.code);
-        return other.name === info.name && other.namespace === info.namespace;
-      });
-  if (existing) existing.code = code;
-  else scripts.push({ id: `s-${crypto.randomUUID()}`, code, enabled: true });
+  const verbs = items.map(({ code, info }) => {
+    const existing = editingId
+      ? scripts.find((s) => s.id === editingId)
+      : scripts.find((s) => {
+          const other = describeScript(s.code);
+          return other.name === info.name && other.namespace === info.namespace;
+        });
+    if (existing) existing.code = code;
+    else scripts.push({ id: `s-${crypto.randomUUID()}`, code, enabled: true });
+    return existing ? 'Updated' : 'Installed';
+  });
   await ext.storage.local.set({ scripts });
-  return existing ? 'Updated' : 'Installed';
+  return verbs;
 }
 
 // --- editor --------------------------------------------------------------------------------------
@@ -180,28 +186,56 @@ function startEditing(script, info) {
 
 function stopEditing() {
   editingId = null;
+  batch = null;
   el('code').value = '';
+  el('code').readOnly = false;
   el('editorTitle').textContent = 'Install a userscript';
   el('save').textContent = 'Install';
   el('cancel').hidden = true;
 }
 
+// The batch is shown read-only in the editor, one file after another.
+function startBatch(files) {
+  stopEditing();
+  batch = files;
+  el('code').value = files.map((f) => `// ----- ${f.fileName} -----\n\n${f.code.trim()}\n`).join('\n');
+  el('code').readOnly = true;
+  el('editorTitle').textContent = `Install ${files.length} userscripts`;
+  el('save').textContent = 'Install all';
+  el('cancel').hidden = false;
+}
+
+// ['Installed', 'Installed', 'Updated'] -> 'Installed 2 scripts, updated 1 script'
+function countVerbs(verbs) {
+  return ['Installed', 'Updated']
+    .map((verb) => [verb, verbs.filter((v) => v === verb).length])
+    .filter(([, n]) => n > 0)
+    .map(([verb, n], i) => `${i ? verb.toLowerCase() : verb} ${n} script${n === 1 ? '' : 's'}`)
+    .join(', ');
+}
+
 el('save').addEventListener('click', () => {
-  const code = el('code').value;
-  const info = describeScript(code);
-  if (info.error) return say(info.error, true);
+  const files = batch || [{ code: el('code').value }];
+  const items = files.map(({ fileName, code }) => ({ fileName, code, info: describeScript(code) }));
+  const valid = items.filter((item) => !item.info.error);
+  const skipped = items
+    .filter((item) => item.info.error)
+    .map((item) => (batch ? `Skipped ${item.fileName}: ${item.info.error}` : item.info.error));
+  if (!valid.length) return say(skipped.join('\n'), true);
 
   let access;
   try {
-    access = requestAccess(info);
+    access = requestAccess(...valid.map((item) => item.info));
   } catch (e) {
     return say(e.message, true);
   }
   access
     .then((granted) =>
-      saveScript(code, info).then((verb) => {
+      saveScripts(valid).then((verbs) => {
         stopEditing();
-        say(granted ? `${verb} ${info.name}.` : `${verb} ${info.name}, but site access was not granted.`, !granted);
+        const done = valid.length === 1 ? `${verbs[0]} ${valid[0].info.name}` : countVerbs(verbs);
+        const text = granted ? `${done}.` : `${done}, but site access was not granted.`;
+        say([text, ...skipped].join('\n'), !granted || skipped.length > 0);
       })
     )
     .catch((e) => say(e.message, true));
@@ -214,12 +248,16 @@ el('cancel').addEventListener('click', () => {
 
 el('import').addEventListener('click', () => el('file').click());
 el('file').addEventListener('change', async () => {
-  const file = el('file').files[0];
+  const files = [...el('file').files];
   el('file').value = '';
-  if (!file) return;
+  if (!files.length) return;
+  if (files.length > 1) {
+    startBatch(await Promise.all(files.map(async (f) => ({ fileName: f.name, code: await f.text() }))));
+    return say(`Loaded ${files.length} files. Review them, then click Install all.`);
+  }
   stopEditing();
-  el('code').value = await file.text();
-  say(`Loaded ${file.name}. Review it, then click Install.`);
+  el('code').value = await files[0].text();
+  say(`Loaded ${files[0].name}. Review it, then click Install.`);
 });
 
 ext.storage.onChanged.addListener((changes, area) => {
