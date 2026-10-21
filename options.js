@@ -63,7 +63,7 @@ function row(script, status = 'Pending') {
   if (info.version) name.append(make('span', 'version', info.version));
   main.append(name);
   if (info.description) main.append(make('div', 'desc', info.description));
-  if (info.matches) main.append(make('div', 'matches', info.matches.join('  ')));
+  if (info.matches) main.append(matchesLine(script.id, info.matches));
 
   const state = make('span', 'status', status);
   if (status === 'Running') state.classList.add('ok');
@@ -85,6 +85,27 @@ function row(script, status = 'Pending') {
   });
   li.append(edit, remove);
   return li;
+}
+
+// Only the first @match is shown; the rest are behind a toggle. The set keeps a script expanded
+// across re-renders (every storage change re-renders the list).
+const expanded = new Set();
+
+function matchesLine(id, matches) {
+  const line = make('div', 'matches');
+  if (matches.length <= 1) {
+    line.textContent = matches.join('');
+    return line;
+  }
+  const open = expanded.has(id);
+  const toggle = make('button', 'more', open ? 'Show less' : `+${matches.length - 1} more`);
+  toggle.addEventListener('click', () => {
+    if (open) expanded.delete(id);
+    else expanded.add(id);
+    line.replaceWith(matchesLine(id, matches));
+  });
+  line.append(open ? matches.join('  ') : matches[0], ' ', toggle);
+  return line;
 }
 
 async function renderBanner() {
