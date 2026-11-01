@@ -3,29 +3,14 @@
 A minimal userscript manager for Firefox (140+) and Chrome (131+). Scripts are stored in the
 extension's local storage, never inside the extension package.
 
-## Install
-
-**Firefox, for testing:** `about:debugging` → This Firefox → Load Temporary Add-on → pick
-`manifest.json`. Removed when Firefox restarts.
-
-**Firefox, permanent:** sign it as an unlisted add-on (not published on AMO):
-
-```sh
-web-ext sign --channel=unlisted --api-key=$AMO_JWT_ISSUER --api-secret=$AMO_JWT_SECRET
-```
-
-then open the resulting `.xpi` in Firefox.
-
-**Chrome:** `chrome://extensions` → Developer mode → Load unpacked → pick this folder. Click **Allow**
-in the manager's banner, then open the extension's Details and turn on **Allow User Scripts**.
-
 ## Use
 
 Click the toolbar icon to open the manager. Paste a script (or **Import files…**) and click
 **Install**. **Import files…** accepts several files at once; they are shown read-only and
 **Install all** installs them together, with one prompt for the sites they match (files with an
 invalid header are skipped). Click **Allow** in the banner once to permit user scripts; each script
-then asks for access to the sites it matches. Installing a script with the same `@name` and `@namespace` as an existing
+then asks for access to the sites it matches. On Chrome, also turn on
+**Allow User Scripts** in the extension's Details page. Installing a script with the same `@name` and `@namespace` as an existing
 one updates it.
 
 ## Supported header keys
