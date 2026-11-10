@@ -94,6 +94,7 @@ function gmApi(scriptId, info) {
       await call('deleteValue', key);
     },
     listValues: () => call('listValues'),
+    closeTab: () => call('closeTab'),
     notification(details, title, image, onclick) {
       if (typeof details !== 'object' || details === null) details = { text: details, title, image, onclick };
       const wait = typeof details.onclick === 'function' || typeof details.ondone === 'function';
@@ -145,7 +146,7 @@ async function readValues(key) {
   return (await ext.storage.local.get({ [key]: {} }))[key];
 }
 
-async function handle({ scriptId, op, args = [] }) {
+async function handle({ scriptId, op, args = [] }, sender) {
   const key = `values:${scriptId}`;
   switch (op) {
     case 'getValue':
@@ -162,6 +163,9 @@ async function handle({ scriptId, op, args = [] }) {
       });
     case 'notification':
       return notify(args[0]);
+    case 'closeTab':
+      if (!sender.tab) throw new Error('Not running in a tab');
+      return ext.tabs.remove(sender.tab.id);
     default:
       throw new Error(`Unknown GM operation: ${op}`);
   }
@@ -173,9 +177,9 @@ let listening = false;
 function listenToUserScripts() {
   if (listening || !ext.runtime.onUserScriptMessage) return;
   listening = true;
-  ext.runtime.onUserScriptMessage.addListener((msg, _sender, sendResponse) => {
+  ext.runtime.onUserScriptMessage.addListener((msg, sender, sendResponse) => {
     if (!msg || !SCRIPT_ID.test(msg.scriptId)) return false;
-    handle(msg).then(
+    handle(msg, sender).then(
       (value) => sendResponse({ value }),
       (e) => sendResponse({ error: String((e && e.message) || e) })
     );

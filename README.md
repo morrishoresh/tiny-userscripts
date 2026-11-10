@@ -34,6 +34,8 @@ Every script gets `GM` (Greasemonkey 4 style, async) and `GM_info`:
 - `GM.getValue(key, default)`, `GM.setValue(key, value)`, `GM.deleteValue(key)`, `GM.listValues()` —
   per-script storage, deleted with the script
 - `GM.notification({ title, text, onclick, ondone })` or `GM.notification(text, title)`
+- `GM.closeTab()` — closes the tab the script runs in, including tabs the page itself could not
+  close with `window.close()`
 - `GM.info`
 
 There is no synchronous `GM_getValue`, no `GM_xmlhttpRequest` and no menu commands.
